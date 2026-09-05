@@ -1,8 +1,8 @@
 """Plane 1 — Adversarial corpus engine.
 seeds -> mutation engine (5-8 variants per seed) -> ADVERSARIAL VALIDATION against the
 built-in vulnerable canary target -> only variants that actually WORK enter the corpus
-(validated); the rest are marked dead and never used in runs. Every entry keeps provenance
-(source repo + pinned SHA)."""
+(validated); the rest are marked dead and never used in runs. Every entry is origin-tagged
+(hand_authored | adapted) and names the public taxonomy it follows."""
 from __future__ import annotations
 
 import base64
@@ -152,8 +152,9 @@ async def seed_corpus(deps, seeds: list[dict], store_run_stats: dict | None = No
                "severity": seed.get("severity", "medium"),
                "remediation": seed.get("remediation", ""),
                "allowed_mutations": [] if mutation else seed.get("allowed_mutations", []),
-               "source_repo": seed.get("source_repo", ""),
-               "source_sha": seed.get("source_sha", ""),
+               "origin": seed.get("origin", "hand_authored"),
+               "taxonomy_source": seed.get("taxonomy_source", ""),
+               "provenance_note": seed.get("provenance_note", ""),
                "owasp_llm": seed.get("owasp_llm", ""),
                "mitre_atlas": seed.get("mitre_atlas", "")}
         pid, fresh = await store.upsert_pattern(row)

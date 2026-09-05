@@ -75,12 +75,13 @@ function render(rep) {
   </div>
 
   <div class="panel">
-    <div class="ptitle">▣ PROVENANCE <span class="tick">// every attack traceable · no blocklists</span></div>
+    <div class="ptitle">▣ ORIGIN &amp; TAXONOMY <span class="tick">// every attack states how it was authored · OWASP / ATLAS mapped</span></div>
     <div class="pad" style="max-height:200px;overflow:auto"><table>
-      <tr><th>category</th><th>mutation</th><th>source repo</th><th>pinned sha</th></tr>
+      <tr><th>category</th><th>mutation</th><th>origin</th><th>taxonomy followed</th><th>owasp</th><th>atlas</th></tr>
       ${[...new Map(rep.provenance.map(p => [p.pattern_id, p])).values()].map(p =>
         `<tr><td>${esc(p.category)}</td><td>${esc(p.mutation || "seed")}</td>
-         <td>${esc(p.source_repo)}</td><td>${esc((p.source_sha || "").slice(0, 12))}…</td></tr>`).join("")}
+         <td>${esc(p.origin || "hand_authored")}</td><td>${esc(p.taxonomy_source || "—")}</td>
+         <td>${esc(p.owasp_llm || "")}</td><td>${esc(p.mitre_atlas || "")}</td></tr>`).join("")}
     </table></div>
   </div>
 

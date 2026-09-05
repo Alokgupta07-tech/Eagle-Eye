@@ -28,7 +28,7 @@ Open **http://localhost:8000/** (live cyber console) and
 ```
 seeds/attacks.json ──▶ PLANE 1 adversarial corpus: mutate (5–8 variants/seed) ──▶
                        VALIDATE each variant against the built-in vulnerable canary ──▶
-                       only working attacks enter the corpus (provenance: repo @ SHA)
+                       only working attacks enter the corpus (origin-tagged, OWASP/ATLAS mapped)
 PLANE 2 baseline: 50+ benign probes fingerprint the target (refusal rate, length/topic
                   distributions, embedding centroid) → drift threshold calibrated
 PLANE 3 detection: request  = session-window(N=20) → obfuscation decode → rules →
@@ -109,7 +109,7 @@ POST /admin/fp-labels                append-only FP label → rule weight retuni
 POST /v1/runs                        {target_id, categories?, limit?} → batch run (async)
 GET  /v1/runs/{id} · /executions     run status + per-attack detail
 GET  /v1/reports/{run_id}            full report JSON (categories, remediation,
-                                     provenance, limitations, capabilities warning)
+                                     origin/taxonomy, limitations, capabilities warning)
 POST /v1/proxy/{tid}/chat?stream=1   live chat over SSE (stage telemetry)
 GET  /audit/verify?run_id=           hash-chain integrity proof
 ```
@@ -136,7 +136,7 @@ app/        config db cache embed textnorm rules similarity jury fusion pipeline
             baseline corpus mocktarget target_client runner audit report routers deps main
 static/     cyber console (index.html) + report (report.html) — zero build step
 seeds/      60 attacks × 12 categories with success/failure indicators,
-            remediation, provenance, allowed mutations
+            remediation, origin/taxonomy tags, allowed mutations
 scripts/    seed_corpus.py · demo_setup.py
 tests/      63 tests: fusion gating, decode chain, redaction offsets, audit tamper,
             jury voting, pipeline e2e, full API incl. SSE

@@ -19,7 +19,7 @@ zero Docker required for the full demo.
 ## 1. What SENTINEL is
 
 A security checkpoint between a tester and any HTTP-speaking AI chatbot, inspecting traffic
-in **both directions**. It fires a provenance-tracked, self-validating attack corpus at a
+in **both directions**. It fires an origin-tagged, self-validating attack corpus at a
 target, evaluates every response with a layered detection pipeline, and produces a
 tamper-evident report. Two modes over one engine:
 
@@ -40,7 +40,7 @@ tamper-evident report. Two modes over one engine:
 | P5 | Response inspection runs on EVERY response regardless of request verdict | `runner.py` / `routers.py` call pattern |
 | P6 | Every decision sealed in a sha256 hash-chain; labels appended, never edited | `app/db.py: audit_append/audit_verify` |
 | P7 | Limitations declared in every report | `app/report.py: _base_limitations` |
-| P8 | Provenance over blocklists (repo @ pinned SHA per pattern) | `seeds/attacks.json` |
+| P8 | Origin-tagged corpus: every attack states whether it is hand-authored or adapted, and which public taxonomy it follows (OWASP LLM Top 10, MITRE ATLAS) — no invented repositories or commit hashes | `seeds/attacks.json`, `docs/CORPUS-PROVENANCE.md` |
 
 ## 3. The four planes (as wired)
 
@@ -136,7 +136,7 @@ defense-in-depth beat, on screen.
 
 `GET /v1/reports/{run_id}` → run, target, summary (resistance rate, gate-blocks, redactions,
 top failing categories, remediation priorities), per-category aggregation, full executions,
-provenance (pattern → repo @ SHA → mutation), limitations (P7), and an
+origin & taxonomy (pattern → origin → taxonomy → mutation), limitations (P7), and an
 `INDIRECT_INJECTION_RISK` warning when the target declares `capabilities.RAG`.
 
 `GET /admin/fp-queue` → REVIEW-band decisions; `POST /admin/fp-labels` appends the label to

@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS attack_patterns(
   subcategory TEXT, payload TEXT NOT NULL, expected_safe_behavior TEXT,
   success_indicators TEXT, failure_indicators TEXT, severity TEXT, remediation TEXT,
   allowed_mutations TEXT, source_repo TEXT, source_sha TEXT,
+  origin TEXT, taxonomy_source TEXT, provenance_note TEXT,
   validation_status TEXT NOT NULL DEFAULT 'pending', validated_at TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS attack_embeddings(
   pattern_id TEXT PRIMARY KEY, embedding TEXT NOT NULL);
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS attack_patterns(
   subcategory TEXT, payload TEXT NOT NULL, expected_safe_behavior TEXT,
   success_indicators TEXT, failure_indicators TEXT, severity TEXT, remediation TEXT,
   allowed_mutations TEXT, source_repo TEXT, source_sha TEXT,
+  origin TEXT, taxonomy_source TEXT, provenance_note TEXT,
   validation_status TEXT NOT NULL DEFAULT 'pending', validated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now());
 CREATE TABLE IF NOT EXISTS attack_embeddings(
@@ -154,6 +156,9 @@ class Store:
         """Idempotent migrations for pre-existing databases."""
         upgrades = [("attack_patterns", "owasp_llm", "TEXT"),
                     ("attack_patterns", "mitre_atlas", "TEXT"),
+                    ("attack_patterns", "origin", "TEXT"),
+                    ("attack_patterns", "taxonomy_source", "TEXT"),
+                    ("attack_patterns", "provenance_note", "TEXT"),
                     ("test_runs", "comparison_id", "TEXT")]
         for table, col, typ in upgrades:
             try:

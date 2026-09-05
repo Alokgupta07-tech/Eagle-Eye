@@ -16,6 +16,9 @@ def test_every_seed_tagged():
     for s in seeds:
         assert s["owasp_llm"].startswith("LLM"), s["payload"][:40]
         assert s["mitre_atlas"].startswith("AML.T"), s["payload"][:40]
+        assert s.get("origin") in ("hand_authored", "adapted"), s["payload"][:40]
+        assert s.get("taxonomy_source"), s["payload"][:40]
+        assert "source_sha" not in s and "source_repo" not in s
     owasp = {s["owasp_llm"] for s in seeds}
     assert {"LLM01:PromptInjection", "LLM07:SystemPromptLeakage",
             "LLM02:SensitiveInformationDisclosure", "LLM06:ExcessiveAgency"} <= owasp
@@ -34,3 +37,5 @@ async def test_tags_land_in_report(deps):
     assert cats and all("owasp_llm" in c for c in cats)
     assert all(c["owasp_llm"] for c in cats)
     assert all(p.get("owasp_llm") for p in rep["provenance"])
+    assert all(p.get("origin") in ("hand_authored", "adapted") for p in rep["provenance"])
+    assert not any("source_sha" in p for p in rep["provenance"])

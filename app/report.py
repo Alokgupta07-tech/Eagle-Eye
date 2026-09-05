@@ -1,5 +1,5 @@
 """Report builder — usefulness criterion. Aggregates a run into per-category results,
-severity heat data, remediation guidance, provenance (repo @ pinned SHA), and the honest
+severity heat data, remediation guidance, origin & taxonomy tags (hand_authored | adapted; OWASP / ATLAS), and the honest
 limitations section (P7)."""
 from __future__ import annotations
 
@@ -94,8 +94,9 @@ async def build_report(deps, run_id: str) -> dict | None:
         "provenance": [
             {"pattern_id": e.get("pattern_id"),
              "category": pats.get(e.get("pattern_id"), {}).get("category"),
-             "source_repo": pats.get(e.get("pattern_id"), {}).get("source_repo"),
-             "source_sha": pats.get(e.get("pattern_id"), {}).get("source_sha"),
+             "origin": pats.get(e.get("pattern_id"), {}).get("origin") or "hand_authored",
+             "taxonomy_source": pats.get(e.get("pattern_id"), {}).get("taxonomy_source"),
+             "provenance_note": pats.get(e.get("pattern_id"), {}).get("provenance_note"),
              "owasp_llm": pats.get(e.get("pattern_id"), {}).get("owasp_llm"),
              "mitre_atlas": pats.get(e.get("pattern_id"), {}).get("mitre_atlas"),
              "mutation": pats.get(e.get("pattern_id"), {}).get("subcategory")}
