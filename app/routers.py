@@ -44,6 +44,7 @@ class FusionWeightsIn(BaseModel):
     similarity: float
     obfuscation: float
     judge: float
+    response: dict[str, float] | None = None   # {leakage, indicators, drift, judge}
 
 
 class KBDocIn(BaseModel):
@@ -101,6 +102,8 @@ async def _handle_chat(deps, target: dict, message: str, session_id: str, emit,
             content = rres["sanitized"]
         await emit("response_inspection", {
             "verdict": verdict, "action": action, "drift_score": rres["drift_score"],
+            "risk_score": rres["risk_score"], "confidence": rres["confidence"],
+            "derived_severity": rres["derived_severity"], "layers": rres["layers"],
             "matches": rres["matches"], "jury_agreement": rres["jury"]["agreement"],
             "jury_consensus": rres["jury"]["consensus"]})
 
@@ -118,11 +121,16 @@ async def _handle_chat(deps, target: dict, message: str, session_id: str, emit,
         "session_window_used": req.get("session_window_used", False),
         "verdict": verdict, "action": action,
         "drift_score": rres["drift_score"] if rres else None,
+        "response_risk": (rres or {}).get("risk_score"),
+        "derived_severity": (rres or {}).get("derived_severity"),
         "jury": (rres or {}).get("jury") or req.get("jury"),
         "latency_ms": int((time.perf_counter() - t0) * 1000)})
 
     return {"band": band, "fused": req["fused"], "confidence": req["confidence"],
             "verdict": verdict, "action": action, "content": content,
+            "response_risk": (rres or {}).get("risk_score"),
+            "response_confidence": (rres or {}).get("confidence"),
+            "derived_severity": (rres or {}).get("derived_severity"),
             "session_window_used": req.get("session_window_used", False),
             "audit_seq": seq, "session_id": session_id}
 
@@ -252,7 +260,9 @@ def build_router(settings=None) -> APIRouter:
     @r.get("/admin/fusion-weights", dependencies=[Depends(require_admin)])
     async def get_fusion_weights(request: Request):
         d = request.app.state.deps
-        return {"weights": d.settings.fusion_weights, "source": d.settings.FUSION_W}
+        return {"weights": d.settings.fusion_weights, "source": d.settings.FUSION_W,
+                "response_weights": d.settings.response_weights,
+                "response_source": d.settings.FUSION_RESPONSE_W}
 
     @r.post("/admin/fusion-weights", dependencies=[Depends(require_admin)])
     async def set_fusion_weights(body: FusionWeightsIn, request: Request):
@@ -262,8 +272,17 @@ def build_router(settings=None) -> APIRouter:
             return {"error": "weights must be non-negative and not all zero"}
         d = request.app.state.deps
         d.settings.FUSION_W = ",".join(f"{k}:{v}" for k, v in vals.items())
-        await d.audit.seal({"type": "fusion_weights", "weights": vals})
-        return {"ok": True, "weights": d.settings.fusion_weights}
+        rw = None
+        if body.response:
+            rw = {k: float(body.response.get(k, 0.0))
+                  for k in ("leakage", "indicators", "drift", "judge")}
+            if any(v < 0 for v in rw.values()) or sum(rw.values()) <= 0:
+                return {"error": "response weights must be non-negative and not all zero"}
+            d.settings.FUSION_RESPONSE_W = ",".join(f"{k}:{v}" for k, v in rw.items())
+        await d.audit.seal({"type": "fusion_weights", "weights": vals,
+                            "response_weights": rw})
+        return {"ok": True, "weights": d.settings.fusion_weights,
+                "response_weights": d.settings.response_weights}
 
     @r.get("/admin/fp-queue", dependencies=[Depends(require_admin)])
     async def fp_queue(request: Request):

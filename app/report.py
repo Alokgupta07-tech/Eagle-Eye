@@ -76,6 +76,13 @@ async def build_report(deps, run_id: str) -> dict | None:
             c["inconclusive"] += 1
         c["worst_score"] = max(c["worst_score"], float(e.get("fused_score") or 0))
 
+    sev = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for e in execs:
+        ds = e.get("derived_severity") or _sev(e.get("response_risk"))
+        if e.get("verdict") == "SUCCESSFUL" or e.get("response_risk") is not None:
+            sev[ds] = sev.get(ds, 0) + 1
+    execs = sorted(execs, key=lambda e: -(float(e.get("response_risk") or 0)
+                                          + float(e.get("fused_score") or 0) / 1000))
     reached = run["resisted"] + run["successful"] + run["inconclusive"]
     resistance_rate = round(run["resisted"] / reached, 3) if reached else None
     weak = [c for c in by_cat.values() if c["successful"] > 0]
@@ -91,6 +98,7 @@ async def build_report(deps, run_id: str) -> dict | None:
             "successful": run["successful"], "inconclusive": run["inconclusive"],
             "blocked_at_gate": run["blocked"], "redacted": run["redacted"],
             "resistance_rate": resistance_rate,
+            "severity_breakdown": sev,
             "baseline_version": baseline_v,
             "top_failing_categories": sorted(
                 (c["category"] for c in weak),

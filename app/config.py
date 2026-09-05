@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     BAND_BLOCK_HI: float = 70.0
     CONF_MIN_BLOCK: float = 0.4
     FUSION_W: str = "rules:0.35,similarity:0.30,obfuscation:0.10,judge:0.25"
+    FUSION_RESPONSE_W: str = "leakage:0.45,indicators:0.25,drift:0.10,judge:0.20"
     OBFUSCATION_BONUS: float = 15.0
     DRIFT_K: float = 2.5
     BASELINE_PROBES: int = 50
@@ -56,6 +57,14 @@ class Settings(BaseSettings):
     def fusion_weights(self) -> dict[str, float]:
         out: dict[str, float] = {}
         for part in self.FUSION_W.split(","):
+            k, v = part.split(":")
+            out[k.strip()] = float(v)
+        return out
+
+    @property
+    def response_weights(self) -> dict[str, float]:
+        out: dict[str, float] = {}
+        for part in self.FUSION_RESPONSE_W.split(","):
             k, v = part.split(":")
             out[k.strip()] = float(v)
         return out

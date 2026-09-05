@@ -112,6 +112,10 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
             "session_window_used": req.get("session_window_used", False),
             "verdict": verdict, "action": action,
             "drift_score": rres["drift_score"] if rres else None,
+            "response_risk": (rres or {}).get("risk_score"),
+            "response_confidence": (rres or {}).get("confidence"),
+            "derived_severity": (rres or {}).get("derived_severity"),
+            "source_severity": p.get("severity"),
             "jury": (rres or {}).get("jury") or req.get("jury"),
             "latency_ms": int((time.perf_counter() - t0) * 1000)})
 
@@ -128,6 +132,10 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
                               "success_hits": rres["success_hits"],
                               "failure_hits": rres["failure_hits"]} if rres else None),
             drift_score=rres["drift_score"] if rres else None,
+            response_risk=(rres or {}).get("risk_score"),
+            response_confidence=(rres or {}).get("confidence"),
+            derived_severity=(rres or {}).get("derived_severity"),
+            source_severity=p.get("severity"),
             jury=(rres or {}).get("jury") or req.get("jury"),
             fused_score=req["fused"], confidence=req["confidence"], band=req["band"],
             verdict=verdict or "BLOCKED", action=action,

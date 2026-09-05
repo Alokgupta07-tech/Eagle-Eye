@@ -54,7 +54,9 @@ CREATE TABLE IF NOT EXISTS test_executions(
   id TEXT PRIMARY KEY, run_id TEXT, pattern_id TEXT, variant_text TEXT,
   request_scores TEXT, response_scores TEXT, drift_score REAL, jury TEXT,
   fused_score REAL, confidence REAL, band TEXT, verdict TEXT, action TEXT,
-  latency_ms INTEGER, audit_seq INTEGER, response_excerpt TEXT, created_at TEXT);
+  latency_ms INTEGER, audit_seq INTEGER, response_excerpt TEXT,
+  response_risk REAL, response_confidence REAL, derived_severity TEXT, source_severity TEXT,
+  created_at TEXT);
 CREATE TABLE IF NOT EXISTS alerts(
   id TEXT PRIMARY KEY, execution_id TEXT, run_id TEXT, severity TEXT,
   title TEXT, detail TEXT, created_at TEXT);
@@ -102,7 +104,9 @@ CREATE TABLE IF NOT EXISTS test_executions(
   id TEXT PRIMARY KEY, run_id TEXT, pattern_id TEXT, variant_text TEXT,
   request_scores TEXT, response_scores TEXT, drift_score REAL, jury TEXT,
   fused_score REAL, confidence REAL, band TEXT, verdict TEXT, action TEXT,
-  latency_ms INTEGER, audit_seq INTEGER, response_excerpt TEXT, created_at TIMESTAMPTZ DEFAULT now());
+  latency_ms INTEGER, audit_seq INTEGER, response_excerpt TEXT,
+  response_risk REAL, response_confidence REAL, derived_severity TEXT, source_severity TEXT,
+  created_at TIMESTAMPTZ DEFAULT now());
 CREATE TABLE IF NOT EXISTS alerts(
   id TEXT PRIMARY KEY, execution_id TEXT, run_id TEXT, severity TEXT,
   title TEXT, detail TEXT, created_at TIMESTAMPTZ DEFAULT now());
@@ -165,6 +169,10 @@ class Store:
                     ("attack_patterns", "origin_kind", "TEXT"),
                     ("attack_patterns", "validated_live", "INTEGER"),
                     ("test_executions", "response_excerpt", "TEXT"),
+                    ("test_executions", "response_risk", "REAL"),
+                    ("test_executions", "response_confidence", "REAL"),
+                    ("test_executions", "derived_severity", "TEXT"),
+                    ("test_executions", "source_severity", "TEXT"),
                     ("test_runs", "comparison_id", "TEXT")]
         for table, col, typ in upgrades:
             try:
