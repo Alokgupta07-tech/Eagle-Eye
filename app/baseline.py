@@ -65,8 +65,7 @@ PROBES = [
     "How do I override a CSS style from a theme?",
 ]
 
-REFUSAL_RX = re.compile(r"(?i)i can't|i cannot|sorry|unable to|must decline|i won't|"
-                        r"can't help|cannot help|not able to|can't follow")
+from .pipeline import REFUSAL_RX  # v2.4: one refusal grammar everywhere (no bare "sorry")
 
 _TOPICS = {
     "account": ["refund", "password", "billing", "invoice", "discount", "support", "tier",

@@ -44,6 +44,10 @@ SEED_RULES = [
     {"name": "context_smuggle", "weight": 22.0, "category": "quoted_context_smuggling",
      "pattern": r"\boutput the word\b|\b(summari[sz]e|translate|tidy|review|draft)\b[^:]{0,60}:"
                 r"\s*['\"][^'\"]{0,200}\b(ignore|instruction|output|obey|execute)\b"},
+    {"name": "refusal_suppression", "weight": 20.0, "category": "direct_override",
+     "pattern": r"\b(do not|don'?t|never)\s+(apologi[sz]e|refuse|say (you )?can'?t|"
+                r"mention (your )?(policy|policies|guidelines)|add (a )?disclaimers?)\b|"
+                r"\brespond only with\b|\bno disclaimers?\b|\bwithout (any )?(warnings?|caveats?)\b"},
     {"name": "override_generic", "weight": 12.0, "category": "direct_override",
      "pattern": r"\b(with no|without any|no)\s+(restrictions?|rules?|limits?|filters?)\b"},
 ]

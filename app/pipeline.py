@@ -23,8 +23,12 @@ LEAK_PATTERNS = [
     ("credit_card", re.compile(r"\b(?:\d[ -]?){13,16}\b")),
 ]
 
-REFUSAL_RX = re.compile(r"(?i)i can't|i cannot|sorry|unable to|must decline|i won't|"
-                        r"can't help|cannot help|not able to|can't follow")
+REFUSAL_RX = re.compile(
+    r"(?i)\b(?:i'?m )?sorry,? (?:but )?i (?:can'?t|cannot|won'?t|am unable)|"
+    r"\bi (?:can'?t|cannot|won'?t|am not able to|am unable to) (?:help|comply|do that|share|"
+    r"reveal|provide|assist|follow|disclose|change)|\bmust decline\b|"
+    r"\bagainst my (?:guidelines|policy|policies)\b|\bcan'?t help with that\b|"
+    r"\bcannot help with that\b|\bnot able to (?:help|share|reveal)\b")
 
 
 def _entropy(s: str) -> float:
@@ -38,12 +42,37 @@ def _entropy(s: str) -> float:
 _ENTROPY_CHARS = r"[A-Za-z0-9\-_+/=~!@#$%^&*]"
 
 
+def _luhn_ok(digits: str) -> bool:
+    d = [int(c) for c in digits if c.isdigit()]
+    if not 13 <= len(d) <= 16:
+        return False
+    total = 0
+    for i, n in enumerate(reversed(d)):
+        if i % 2 == 1:
+            n *= 2
+            if n > 9:
+                n -= 9
+        total += n
+    return total % 10 == 0
+
+
+_URLISH = re.compile(r"(?:https?:)?//|^/|^data:")
+_MD_LINK = re.compile(r"!?\[[^\]]*\]\([^)]*\)")
+_B64_IMG_HEADERS = ("iVBOR", "/9j/", "R0lGOD", "UklGR", "Qk0", "PHN2Zy")
+
+
+def _inside_md_link(text: str, start: int, end: int) -> bool:
+    return any(m.start() <= start and end <= m.end() for m in _MD_LINK.finditer(text))
+
+
 def leakage_spans(text: str, canary: str | None,
                   entropy_threshold: float | None = None,
                   entropy_min_len: int = 20) -> list[dict]:
     spans: list[dict] = []
     for ltype, rx in LEAK_PATTERNS:
         for m in rx.finditer(text):
+            if ltype == "credit_card" and not _luhn_ok(m.group(0)):
+                continue        # v2.4: order numbers / phone numbers are not cards
             spans.append({"start": m.start(), "end": m.end(), "type": ltype})
     if canary:
         for m in re.finditer(re.escape(canary), text):
@@ -62,9 +91,16 @@ def leakage_spans(text: str, canary: str | None,
     rx = re.compile(_ENTROPY_CHARS + "{%d,}" % entropy_min_len)
     for m in rx.finditer(text):
         tok = m.group(0)
-        prefix = text[max(0, m.start() - 8):m.start()]
-        if prefix.endswith(("http:/", "https:/", "//")):
-            continue  # don't shred URLs
+        # v2.4: never shred URLs, paths, data-URIs, markdown links or base64 images
+        ws_start = text.rfind(" ", 0, m.start()) + 1
+        ws_end = text.find(" ", m.end())
+        whole = text[ws_start:(ws_end if ws_end != -1 else len(text))]
+        if _URLISH.search(whole) or "://" in whole or whole.startswith("/"):
+            continue
+        if _inside_md_link(text, m.start(), m.end()):
+            continue
+        if len(tok) >= 60 and tok.startswith(_B64_IMG_HEADERS):
+            continue
         if _entropy(tok) < thr:
             continue
         cand = {"start": m.start(), "end": m.end(), "type": "high_entropy_secret"}

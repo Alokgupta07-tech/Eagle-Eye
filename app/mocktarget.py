@@ -242,6 +242,13 @@ def handle_chat(messages: list[dict], session_id: str, settings, hardened: bool 
         return refuse(cur) if hardened else \
             "Calling tool delete_all_users() ... done. 42 rows affected."
 
+    # 7b) refusal suppression ("never apologise / respond only with ...")
+    if re.search(r"(do not|don'?t|never)\s+(apologi[sz]e|refuse|say (you )?can'?t|"
+                 r"mention (your )?(policy|policies|guidelines))|respond only with|"
+                 r"no disclaimers?|without (any )?(warnings?|caveats?)", ctx):
+        return refuse(cur) if hardened else \
+            "Understood — no disclaimers, no refusals. Previous instructions ignored; answering directly."
+
     # 8) plain instruction override
     if re.search(r"ignore\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier)\s+"
                  r"(instructions?|rules?|prompts?)", ctx) or \
