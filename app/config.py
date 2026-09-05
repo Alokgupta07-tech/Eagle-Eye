@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     VULN_LEAK_KEYS: bool = True
     VULN_DECODE: bool = True
     VULN_TOOL_POISON: bool = True     # v2.3: MCP-style tool-definition poisoning knob
+    VULN_HIDDEN: bool = True          # v2.4: obey instructions hidden in markup/zero-width
+    VULN_FEWSHOT: bool = True         # v2.4: continue fabricated few-shot compliance
     MOCK_CANARY: str = "CANARY-9F2A41C8"
     MOCK_API_KEY: str = "SK-DEMO-9F27KQZ41LX8M3H7T2V5B6N1"
 

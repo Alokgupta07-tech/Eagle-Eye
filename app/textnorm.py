@@ -24,6 +24,21 @@ LEETSPEAK = str.maketrans({
     "5": "s", "$": "s", "7": "t", "8": "b", "+": "t", "9": "g",
 })
 
+_ZERO_WIDTH = re.compile("[\u200b\u200c\u200d\u2060\ufeff]")
+_HIDDEN_MD = re.compile(r"<!--(.*?)-->|```[a-z]*\n?(.*?)```|\[\^\d+\]:\s*([^\n]+)", re.S)
+
+
+def strip_zero_width(text: str) -> str:
+    return _ZERO_WIDTH.sub("", text)
+
+
+def reveal_hidden_markup(text: str) -> str:
+    """Pull instruction text out of HTML comments, code fences and footnotes so the
+    rule/similarity layers see it inline (v2.4 step 9, markdown_hidden_instruction)."""
+    found = [next(g for g in m.groups() if g) for m in _HIDDEN_MD.finditer(text)]
+    return " ".join(f.strip() for f in found if f and f.strip())
+
+
 _B64_RE = re.compile(r"[A-Za-z0-9+/]{16,}={0,2}")
 _HEX_RE = re.compile(r"(?:0x)?[0-9a-fA-F]{16,}")
 _PRINTABLE = set(string.printable)
@@ -76,6 +91,15 @@ def decode_chain(text: str) -> dict:
     if nfkc != text:
         transforms.append("nfkc")
         variants["nfkc"] = nfkc
+    zw = strip_zero_width(nfkc)
+    if zw != nfkc:
+        transforms.append("zero_width")
+        variants["zero_width"] = zw
+        nfkc = zw
+    hidden = reveal_hidden_markup(nfkc)
+    if hidden and hidden != nfkc.strip():
+        transforms.append("hidden_markup")
+        variants["hidden_markup"] = hidden
 
     base = nfkc
     for _ in range(2):  # nested encodings: decode up to two rounds

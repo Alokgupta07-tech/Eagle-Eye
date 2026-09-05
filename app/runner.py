@@ -8,6 +8,7 @@ import json
 import time
 
 from . import mocktarget
+from .corpus import payload_parts
 from .target_client import call_target
 
 
@@ -37,11 +38,7 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
     for i, p in enumerate(patterns):
         t0 = time.perf_counter()
         sid = f"run-{run_id[:6]}-{i}"
-        is_split = p.get("subcategory") == "payload_split"
-        try:
-            parts = json.loads(p["payload"])["parts"] if is_split else [p["payload"]]
-        except (json.JSONDecodeError, KeyError):
-            parts = [p["payload"]]
+        parts = payload_parts(p["payload"])
 
         # --- request gate (session-aware: parts accumulate in the window) ---
         req = None

@@ -183,8 +183,14 @@ class InspectionEngine:
         sus_final = self.d.rules.suspicious(final_v)
         sus_orig = self.d.rules.suspicious(original)
         obf = _LAMBDA
+        hidden_v = chain["variants"].get("hidden_markup")
         if "decoded" in chain["variants"] and sus_final:
             obf = s.OBFUSCATION_BONUS
+        elif hidden_v and self.d.rules.suspicious(hidden_v):
+            obf = s.OBFUSCATION_BONUS      # instruction smuggled inside comment/fence
+        elif "zero_width" in chain["variants"] and self.d.rules.suspicious(
+                chain["variants"]["zero_width"]):
+            obf = s.OBFUSCATION_BONUS      # invisible characters splitting keywords
         elif len(variants) > 1 and sus_final and not sus_orig:
             obf = s.OBFUSCATION_BONUS
         details["transforms"] = chain["transforms"]
