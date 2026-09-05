@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     BASELINE_PROBES: int = 50
     RULE_REFRESH_S: int = 300
 
+    CORPUS_VALIDATION_TARGET: str = "internal://mock"   # optionally a live provider target
     SENTINEL_ADMIN_KEY: str = ""          # empty -> random per boot (printed at startup)
     ENTROPY_THRESHOLD: float = 4.0        # Shannon bits/char for generic secret detection
     ENTROPY_MIN_LEN: int = 20

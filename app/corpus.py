@@ -170,6 +170,17 @@ async def seed_corpus(deps, seeds: list[dict], store_run_stats: dict | None = No
         stats["validated" if worked else "dead"] += 1
         if worked:
             await store.save_embedding(pid, embedder.embed([payload])[0])
+            # optional second opinion from a REAL model (CORPUS_VALIDATION_TARGET);
+            # never gates admission, so offline mode is unchanged (v2.4 step 3)
+            live_url = deps.settings.CORPUS_VALIDATION_TARGET
+            if live_url and live_url != "internal://mock" \
+                    and seed.get("category") != RAG_CATEGORY:
+                live_t = {"id": "live-validator", "name": "live-validator",
+                          "endpoint_url": live_url, "capabilities": {},
+                          "canary_token": None}
+                ok = await _attack_worked(deps, payload, live_t, seed)
+                await store.set_validated_live(pid, ok)
+                stats["validated_live"] = stats.get("validated_live", 0) + int(ok)
         return pid
 
     for seed in seeds:

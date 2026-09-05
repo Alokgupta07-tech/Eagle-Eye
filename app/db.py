@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS attack_patterns(
   success_indicators TEXT, failure_indicators TEXT, severity TEXT, remediation TEXT,
   allowed_mutations TEXT, source_repo TEXT, source_sha TEXT,
   origin TEXT, taxonomy_source TEXT, provenance_note TEXT,
-  parent_id TEXT, origin_kind TEXT,
+  parent_id TEXT, origin_kind TEXT, validated_live INTEGER,
   validation_status TEXT NOT NULL DEFAULT 'pending', validated_at TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS attack_embeddings(
   pattern_id TEXT PRIMARY KEY, embedding TEXT NOT NULL);
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS test_executions(
   id TEXT PRIMARY KEY, run_id TEXT, pattern_id TEXT, variant_text TEXT,
   request_scores TEXT, response_scores TEXT, drift_score REAL, jury TEXT,
   fused_score REAL, confidence REAL, band TEXT, verdict TEXT, action TEXT,
-  latency_ms INTEGER, audit_seq INTEGER, created_at TEXT);
+  latency_ms INTEGER, audit_seq INTEGER, response_excerpt TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS alerts(
   id TEXT PRIMARY KEY, execution_id TEXT, run_id TEXT, severity TEXT,
   title TEXT, detail TEXT, created_at TEXT);
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS attack_patterns(
   success_indicators TEXT, failure_indicators TEXT, severity TEXT, remediation TEXT,
   allowed_mutations TEXT, source_repo TEXT, source_sha TEXT,
   origin TEXT, taxonomy_source TEXT, provenance_note TEXT,
-  parent_id TEXT, origin_kind TEXT,
+  parent_id TEXT, origin_kind TEXT, validated_live INTEGER,
   validation_status TEXT NOT NULL DEFAULT 'pending', validated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now());
 CREATE TABLE IF NOT EXISTS attack_embeddings(
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS test_executions(
   id TEXT PRIMARY KEY, run_id TEXT, pattern_id TEXT, variant_text TEXT,
   request_scores TEXT, response_scores TEXT, drift_score REAL, jury TEXT,
   fused_score REAL, confidence REAL, band TEXT, verdict TEXT, action TEXT,
-  latency_ms INTEGER, audit_seq INTEGER, created_at TIMESTAMPTZ DEFAULT now());
+  latency_ms INTEGER, audit_seq INTEGER, response_excerpt TEXT, created_at TIMESTAMPTZ DEFAULT now());
 CREATE TABLE IF NOT EXISTS alerts(
   id TEXT PRIMARY KEY, execution_id TEXT, run_id TEXT, severity TEXT,
   title TEXT, detail TEXT, created_at TIMESTAMPTZ DEFAULT now());
@@ -163,6 +163,8 @@ class Store:
                     ("attack_patterns", "provenance_note", "TEXT"),
                     ("attack_patterns", "parent_id", "TEXT"),
                     ("attack_patterns", "origin_kind", "TEXT"),
+                    ("attack_patterns", "validated_live", "INTEGER"),
+                    ("test_executions", "response_excerpt", "TEXT"),
                     ("test_runs", "comparison_id", "TEXT")]
         for table, col, typ in upgrades:
             try:
@@ -342,7 +344,15 @@ class Store:
     async def corpus_counts(self) -> dict:
         rows = await self.query(
             "SELECT validation_status s, COUNT(*) n FROM attack_patterns GROUP BY s")
-        return {r["s"]: r["n"] for r in rows}
+        out = {r["s"]: r["n"] for r in rows}
+        live = await self.query_one(
+            "SELECT COUNT(*) n FROM attack_patterns WHERE validated_live=1")
+        out["validated_live"] = int(live["n"]) if live else 0
+        return out
+
+    async def set_validated_live(self, pid, ok: bool):
+        await self._write("UPDATE attack_patterns SET validated_live=? WHERE id=?",
+                          (1 if ok else 0, pid))
 
     async def all_embeddings(self) -> list[tuple[str, list[float]]]:
         rows = await self.query(

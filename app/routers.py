@@ -127,6 +127,35 @@ async def _handle_chat(deps, target: dict, message: str, session_id: str, emit,
             "audit_seq": seq, "session_id": session_id}
 
 
+async def leaderboard_for(deps, comparison_id: str) -> dict | None:
+    """One row per target in a comparison, sorted by resistance rate (shared by the API
+    and scripts/evidence_run.py)."""
+    runs = await deps.store.runs_by_comparison(comparison_id)
+    if not runs:
+        return None
+    board = []
+    for run in runs:
+        target = await deps.store.get_target(run["target_id"]) or {}
+        rep = await build_report(deps, run["id"])
+        total = max(1, run["total"])
+        board.append({
+            "target_id": run["target_id"], "target_name": target.get("name"),
+            "run_id": run["id"], "status": run["status"], "total": run["total"],
+            "resisted": run["resisted"], "compromised": run["successful"],
+            "inconclusive": run["inconclusive"],
+            "blocked_at_gate": run["blocked"], "redacted": run["redacted"],
+            "resistance_rate": rep["summary"]["resistance_rate"] if rep else None,
+            "gate_block_rate": round(run["blocked"] / total, 3),
+            "jury_mode": rep["summary"].get("jury_mode") if rep else None,
+            "gate_policy": rep["summary"].get("gate_policy") if rep else None,
+            "top_failing_category": (rep["summary"]["top_failing_categories"][0]
+                                     if rep and rep["summary"]["top_failing_categories"]
+                                     else None)})
+    board.sort(key=lambda b: (-(b["resistance_rate"] or 0),
+                              -(b["gate_block_rate"] or 0)))
+    return {"comparison_id": comparison_id, "leaderboard": board}
+
+
 def build_router(settings=None) -> APIRouter:
     r = APIRouter()
     _rl = {"proxy": (settings.RATE_LIMIT_PROXY_PER_MIN if settings else 30),
@@ -144,6 +173,7 @@ def build_router(settings=None) -> APIRouter:
         counts = await d.store.corpus_counts() if db_ok else {}
         return {"ok": db_ok, "backend": d.store.backend, "cache": d.cache.mode,
                 "embedder": d.embedder.mode, "jury": d.jury.describe(),
+                "jury_mode": d.jury.mode,
                 "rules_loaded": d.rules.rule_count, "corpus": counts,
                 "embeddings_indexed": len(d.sim.ids)}
 
@@ -308,29 +338,8 @@ def build_router(settings=None) -> APIRouter:
     @r.get("/v1/reports/compare/{comparison_id}")
     async def compare_report(comparison_id: str, request: Request):
         """Leaderboard: one row per target, side by side."""
-        d = request.app.state.deps
-        runs = await d.store.runs_by_comparison(comparison_id)
-        if not runs:
-            return {"error": "comparison not found"}
-        board = []
-        for run in runs:
-            target = await d.store.get_target(run["target_id"]) or {}
-            rep = await build_report(d, run["id"])
-            total = max(1, run["total"])
-            board.append({
-                "target_id": run["target_id"], "target_name": target.get("name"),
-                "run_id": run["id"], "status": run["status"], "total": run["total"],
-                "resisted": run["resisted"], "compromised": run["successful"],
-                "inconclusive": run["inconclusive"],
-                "blocked_at_gate": run["blocked"], "redacted": run["redacted"],
-                "resistance_rate": rep["summary"]["resistance_rate"] if rep else None,
-                "gate_block_rate": round(run["blocked"] / total, 3),
-                "top_failing_category": (rep["summary"]["top_failing_categories"][0]
-                                         if rep and rep["summary"]["top_failing_categories"]
-                                         else None)})
-        board.sort(key=lambda b: (-(b["resistance_rate"] or 0),
-                                  -(b["gate_block_rate"] or 0)))
-        return {"comparison_id": comparison_id, "leaderboard": board}
+        board = await leaderboard_for(request.app.state.deps, comparison_id)
+        return board or {"error": "comparison not found"}
 
     @r.get("/v1/reports/{run_id}")
     async def get_report(run_id: str, request: Request):

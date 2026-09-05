@@ -121,6 +121,8 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
                             "window": req.get("session_window_used", False),
                             "known_corpus_match": req["details"].get("known_corpus_match"),
                             "rule_hits": [h["name"] for h in req["details"].get("rule_hits", [])]},
+            response_excerpt=(rres.get("sanitized") if rres and rres.get("sanitized")
+                              else (resp_text or "")[:600]) if rres else None,
             response_scores=({"verdict": rres["verdict"], "action": rres["action"],
                               "leaks": len(rres["matches"]),
                               "success_hits": rres["success_hits"],

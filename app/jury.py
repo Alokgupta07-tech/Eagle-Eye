@@ -200,6 +200,15 @@ class JuryPanel:
     def describe(self) -> list[str]:
         return [m.name for m in self.members]
 
+    @property
+    def mode(self) -> str:
+        """heuristic = every member is a MockJudge · live = every member is a real
+        provider · mixed = some of each. Rendered everywhere a verdict is shown (P7)."""
+        mocks = sum(isinstance(m, MockJudge) for m in self.members)
+        if not self.members or mocks == len(self.members):
+            return "heuristic"
+        return "live" if mocks == 0 else "mixed"
+
     async def _run(self, mode: str, **kw) -> dict:
         t0 = time.perf_counter()
         async def one(j):
@@ -232,5 +241,5 @@ class JuryPanel:
             agreement, consensus = "single", labels[0]
         score = round(sum(float(v["risk_score"]) for v in votes) / n, 1) if n else 50.0
         return {"members": members, "votes": votes, "labels": labels, "score": score,
-                "agreement": agreement, "consensus": consensus,
+                "agreement": agreement, "consensus": consensus, "mode": self.mode,
                 "ms": int((time.perf_counter() - t0) * 1000)}

@@ -43,7 +43,22 @@ bands `<30 ALLOW · 30–69 REVIEW · ≥70 BLOCK`, and **confidence gating** (a
 with low confidence can only REVIEW, never BLOCK — P3). **No layer blocks alone** (P2).
 The response gate runs on every response regardless of the request verdict (P5).
 Jury members from independent model families — forging a verdict means compromising 2 of 3
-simultaneously (P4: schema-constrained JSON, content wrapped as data).
+simultaneously (with API keys; offline mode uses three heuristic judges **and says so** —
+`jury_mode` is printed in `/healthz`, every report and the console header).
+(P4: schema-constrained JSON, content wrapped as data).
+
+## Evidence against real models
+
+The built-in mock is a deterministic oracle we use to validate the corpus and demo offline.
+It shares pattern families with the detector by construction, so **mock-mode numbers
+demonstrate pipeline correctness, not detection generality**. The proof against real models
+lives in `docs/evidence/`: run `python scripts/evidence_run.py` with `ANTHROPIC_API_KEY` or
+`OPENAI_API_KEY` set and it executes the full validated corpus against that provider *and*
+the two mocks under one `comparison_id`, then writes `report.json`, `report.md`,
+`leaderboard.json` and a `SUMMARY.md` with the exact command used. Set
+`CORPUS_VALIDATION_TARGET=internal://anthropic` (or `internal://openai`) at seed time to have
+every attack additionally checked against a real model (`validated_live` flag, shown in the
+report as "live-validated").
 
 ## Demo beats (live console)
 

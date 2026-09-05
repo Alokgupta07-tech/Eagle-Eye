@@ -225,9 +225,10 @@ $("#inp").addEventListener("keydown", e => {
   $("#ledEmbed").textContent = "EMBED " + h.embedder.toUpperCase();
   $("#ledStore").textContent = (h.backend + "+" + h.cache).toUpperCase();
   $("#ledCorpus").textContent = `CORPUS ${h.corpus.validated || 0}✓/${h.corpus.dead || 0}✗`;
-  const mocks = h.jury.filter(j => j.startsWith("MOCK")).length;
-  $("#ledJuryT").textContent = mocks ? `JURY ${h.jury.length - mocks}L+${mocks}M` : "JURY 3/3 LIVE";
-  $("#ledJury").classList.toggle("warn", mocks > 0);
+  const jm = (h.jury_mode || "heuristic").toUpperCase();
+  $("#ledJuryT").textContent = jm === "LIVE" ? `JURY: LIVE ×${h.jury.length}` : `JURY: ${jm}`;
+  $("#ledJury").classList.toggle("warn", jm !== "LIVE");
+  $("#ledJury").title = "jury members: " + h.jury.join(", ");
   line(`[BOOT] rules=${h.rules_loaded} · embedder=${h.embedder} · jury=[${h.jury.join(", ")}]`, "dim");
   line(`[BOOT] corpus: ${h.corpus.validated || 0} validated attacks indexed`, "dim");
 
