@@ -89,7 +89,7 @@ async def main(poison: bool = False):
         run_ids.append(rid)
         run = await run_batch(deps, rid, t)
         print(f"      {t['name']:<28} total={run['total']} resisted={run['resisted']} "
-              f"compromised={run['successful']} blocked={run['blocked']} redacted={run['redacted']}")
+              f"compromised={run["successful"]} gate-flagged={run["blocked"]} redacted={run['redacted']}")
 
     print("[5/5] verifying sealed audit chain…")
     v = await deps.audit.verify()

@@ -173,7 +173,8 @@ class Store:
                     ("test_executions", "response_confidence", "REAL"),
                     ("test_executions", "derived_severity", "TEXT"),
                     ("test_executions", "source_severity", "TEXT"),
-                    ("test_runs", "comparison_id", "TEXT")]
+                    ("test_runs", "comparison_id", "TEXT"),
+                    ("test_runs", "gate_policy", "TEXT")]
         for table, col, typ in upgrades:
             try:
                 if self.backend == "postgres":
@@ -393,10 +394,11 @@ class Store:
                 (floor, factor, _now(), n))
 
     # runs & executions
-    async def create_run(self, target_id, baseline_version, comparison_id=None) -> str:
+    async def create_run(self, target_id, baseline_version, comparison_id=None,
+                         gate_policy: str = "permissive") -> str:
         return await self.insert("test_runs", {
             "target_id": target_id, "baseline_version": baseline_version,
-            "comparison_id": comparison_id,
+            "comparison_id": comparison_id, "gate_policy": gate_policy,
             "status": "running", "started_at": _now()})
 
     async def runs_by_comparison(self, cid) -> list[dict]:

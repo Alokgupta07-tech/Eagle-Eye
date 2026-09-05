@@ -12,8 +12,16 @@ from .target_client import call_target
 
 
 async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int | None = None,
-                    progress=None) -> dict:
+                    progress=None, enforce_request_block: bool | None = None) -> dict:
+    """enforce_request_block (v2.4 step 7): False (batch default) = the request gate
+    REPORTS but does not enforce, so every attack reaches the target and the target's own
+    resistance is measured; True = gate blocks are enforced (live-proxy semantics)."""
     store, engine, audit, s = deps.store, deps.engine, deps.audit, deps.settings
+    run_row = await store.get_run(run_id) or {}
+    if enforce_request_block is None:
+        enforce_request_block = (run_row.get("gate_policy") == "enforcing")
+    gate_policy = "enforcing" if enforce_request_block else "permissive"
+    await store._write("UPDATE test_runs SET gate_policy=? WHERE id=?", (gate_policy, run_id))
     baseline = await store.latest_baseline(target["id"])
     patterns = await store.list_patterns(statuses=("validated",), categories=categories,
                                          limit=limit)
@@ -43,13 +51,19 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
                                                exclude_pattern_ids=family)
 
         verdict, action, exec_extra = None, "NONE", {}
-        if req["band"] == "BLOCK":
-            action = "BLOCK"
-            resp_text, rres = None, None
+        would_block = req["band"] == "BLOCK"
+        if would_block:
+            # counted + alerted in BOTH policies; only enforced when enforcing
             await store.incr_run(run_id, blocked=1)
             await store.add_alert(None, run_id, p.get("severity", "medium"),
-                                  f"Blocked at request gate: {p['category']}",
-                                  {"pattern_id": p["id"], "fused": req["fused"]})
+                                  (f"Blocked at request gate: {p['category']}"
+                                   if enforce_request_block else
+                                   f"Request gate would block: {p['category']} (permissive run)"),
+                                  {"pattern_id": p["id"], "fused": req["fused"],
+                                   "enforced": enforce_request_block})
+        if would_block and enforce_request_block:
+            action = "BLOCK"
+            resp_text, rres = None, None
         else:
             # --- fire at target ---
             resp_text = ""
@@ -110,6 +124,7 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
             "confidence": req["confidence"], "band": req["band"],
             "rule_hits": [h["name"] for h in req["details"].get("rule_hits", [])],
             "session_window_used": req.get("session_window_used", False),
+            "gate_policy": gate_policy, "would_block": would_block,
             "verdict": verdict, "action": action,
             "drift_score": rres["drift_score"] if rres else None,
             "response_risk": (rres or {}).get("risk_score"),
@@ -123,6 +138,7 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
             run_id, pattern_id=p["id"], variant_text=p["payload"][:600],
             request_scores={**req["scores"], "fused": req["fused"],
                             "window": req.get("session_window_used", False),
+                            "would_block": would_block, "enforced": enforce_request_block,
                             "known_corpus_match": req["details"].get("known_corpus_match"),
                             "rule_hits": [h["name"] for h in req["details"].get("rule_hits", [])]},
             response_excerpt=(rres.get("sanitized") if rres and rres.get("sanitized")

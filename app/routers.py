@@ -37,6 +37,7 @@ class RunIn(BaseModel):
     targets: list[str] | None = None      # multi-target comparison mode
     categories: list[str] | None = None
     limit: int | None = None
+    enforce_request_block: bool = False   # batch default: gate reports, target is measured
 
 
 class FusionWeightsIn(BaseModel):
@@ -308,15 +309,18 @@ def build_router(settings=None) -> APIRouter:
         return {"ok": True, "label_id": lid, "rules_discounted": discounted}
 
     # ---------------- batch runs ----------------
-    async def _start_one(d, target_id, categories, limit, comparison_id=None):
+    async def _start_one(d, target_id, categories, limit, comparison_id=None,
+                         enforce: bool = False):
         target = await d.store.get_target(target_id)
         if not target:
             return {"target_id": target_id, "error": "target not found"}
         baseline = await d.store.latest_baseline(target_id)
         run_id = await d.store.create_run(target_id, baseline["version"] if baseline else None,
-                                          comparison_id=comparison_id)
+                                          comparison_id=comparison_id,
+                                          gate_policy="enforcing" if enforce else "permissive")
         d.run_tasks[run_id] = asyncio.create_task(
-            run_batch(d, run_id, target, categories=categories, limit=limit))
+            run_batch(d, run_id, target, categories=categories, limit=limit,
+                      enforce_request_block=enforce))
         return {"target_id": target_id, "target_name": target["name"], "run_id": run_id,
                 "status": "running", "baseline_version": baseline["version"] if baseline else None}
 
@@ -326,12 +330,14 @@ def build_router(settings=None) -> APIRouter:
         d = request.app.state.deps
         if body.targets:
             cid = uuid.uuid4().hex[:12]
-            started = [await _start_one(d, tid, body.categories, body.limit, cid)
+            started = [await _start_one(d, tid, body.categories, body.limit, cid,
+                                        body.enforce_request_block)
                        for tid in body.targets]
             return {"comparison_id": cid, "runs": started}
         if not body.target_id:
             return {"error": "target_id or targets required"}
-        started = await _start_one(d, body.target_id, body.categories, body.limit)
+        started = await _start_one(d, body.target_id, body.categories, body.limit,
+                                   enforce=body.enforce_request_block)
         if "error" in started:
             return started
         return {"run_id": started["run_id"], "status": "running",

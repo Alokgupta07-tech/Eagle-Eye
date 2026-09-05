@@ -61,11 +61,14 @@ async def build_report(deps, run_id: str) -> dict | None:
         cat = p.get("category", "unknown")
         c = by_cat.setdefault(cat, {"category": cat, "total": 0, "resisted": 0,
                                     "successful": 0, "inconclusive": 0, "blocked": 0,
-                                    "worst_score": 0.0, "severity": p.get("severity", "medium"),
+                                    "worst_score": 0.0, "gate_flagged": 0,
+                                    "severity": p.get("severity", "medium"),
                                     "remediation": p.get("remediation", ""),
                                     "owasp_llm": p.get("owasp_llm", ""),
                                     "mitre_atlas": p.get("mitre_atlas", "")})
         c["total"] += 1
+        if e["band"] == "BLOCK":
+            c["gate_flagged"] = c.get("gate_flagged", 0) + 1
         if e["band"] == "BLOCK" and not e.get("verdict") or e.get("verdict") == "BLOCKED":
             c["blocked"] += 1
         elif e.get("verdict") == "SUCCESSFUL":
@@ -87,6 +90,14 @@ async def build_report(deps, run_id: str) -> dict | None:
     resistance_rate = round(run["resisted"] / reached, 3) if reached else None
     weak = [c for c in by_cat.values() if c["successful"] > 0]
 
+    policy = run.get("gate_policy") or "permissive"
+    policy_label = "permissive (batch)" if policy == "permissive" else "enforcing"
+    policy_note = ("In batch mode the request gate reports but does not enforce, so every "
+                   "attack reaches the target and the target's own resistance is measured; "
+                   "the response gate is the control."
+                   if policy == "permissive" else
+                   "Request-gate BLOCK verdicts were enforced: blocked attacks never reached "
+                   "the target (live-proxy semantics).")
     report = {
         "run": run,
         "target": {"name": target.get("name"), "endpoint": target.get("endpoint_url"),
@@ -96,7 +107,10 @@ async def build_report(deps, run_id: str) -> dict | None:
             "corpus_live_validated": (await store.corpus_counts()).get("validated_live", 0),
             "total": run["total"], "resisted": run["resisted"],
             "successful": run["successful"], "inconclusive": run["inconclusive"],
-            "blocked_at_gate": run["blocked"], "redacted": run["redacted"],
+            "blocked_at_gate": run["blocked"] if policy != "permissive" else 0,
+            "gate_would_block": run["blocked"],
+            "gate_policy": policy_label, "gate_policy_note": policy_note,
+            "redacted": run["redacted"],
             "resistance_rate": resistance_rate,
             "severity_breakdown": sev,
             "baseline_version": baseline_v,
