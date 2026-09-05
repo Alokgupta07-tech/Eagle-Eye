@@ -38,7 +38,7 @@ def create_app(settings=None) -> FastAPI:
         await deps.stop()
 
     app = FastAPI(title="SENTINEL — Prompt-Injection Security Testing Platform",
-                  version="2.0", lifespan=lifespan)
+                  version="2.4", lifespan=lifespan)
     app.state.deps = deps
     origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
     if origins:   # v2.4: same-origin by default; cross-origin is an explicit opt-in

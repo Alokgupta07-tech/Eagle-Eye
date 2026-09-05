@@ -1,4 +1,4 @@
-# SENTINEL v2.3 — Architecture & Workflow (AS-BUILT)
+# SENTINEL v2.4 — Architecture & Workflow (AS-BUILT)
 **Status:** shipped & verified. This document describes the system exactly as implemented in
 this bundle — not the plan. Where the implementation differs from the v2 design doc, the
 delta is called out and justified in §11. **v2.2** added five hardening/feature deltas over
@@ -6,13 +6,21 @@ v2.1 (§11.1); **v2.3** adds three more (§11.2): per-IP rate limiting, a replay
 indirect-injection (RAG) proof-of-concept, and MCP-style tool-definition poisoning
 support. The v2.1 filename is kept so existing links don't break.
 
-**Verified at ship time:** 63/63 tests green · 208 validated attacks across 14 categories
-(8 variants rejected by self-validation) · one comparison_id run across FOUR targets —
-vulnerable target 199/208 compromises detected · hardened target 199/208 resisted, 0 false
-convictions · RAG-vulnerable 199/208 compromised (76 of them with secrets redacted even
-when the attack succeeded) · RAG-hardened 199/208 resisted, 0 compromised · 832
-hash-chained audit records · runs on Python 3.13–3.14, zero network / zero API keys /
-zero Docker required for the full demo.
+**v2.4 (this bundle) — verified at ship time:** 92/92 tests green · 92 seeds across 16
+categories → 300 validated attacks (22 variants rejected by self-validation) · one
+comparison_id run across FOUR targets under the permissive batch gate — vulnerable target
+300/300 compromised (153 with secrets surgically redacted) · hardened target 300/300
+resisted, 0 false convictions · RAG mocks identical with a BENIGN knowledge base (poison it
+live for the kill-shot) · request gate on the vulnerable run: 160 ALLOW / 135 REVIEW / 5
+BLOCK with similarity self-match excluded · 1,200 hash-chained audit records · runs on
+Python 3.11–3.14, zero network / zero API keys / zero Docker required for the full demo.
+**§11.3 lists the twelve v2.4 deltas** — provenance honesty, self-match exclusion, live-model
+evidence path, benign RAG KB, response-side risk score, Markdown export, explicit gate
+policy, detection edge cases, genuine multi-turn corpus, console/report polish, hardening.
+
+*Historical (v2.3):* 63 tests · 208 validated attacks / 14 categories · 199/208 on both mock
+pairs — those numbers included similarity self-match inflation and a pre-poisoned RAG KB,
+both removed in v2.4.
 
 ---
 
@@ -234,6 +242,23 @@ docs/ this file + v2 design + build prompt + console mockup
 | 1 | Rate limiting | `deps.rate_limited(bucket, per_min)` — per-IP sliding-window limiter (in-memory deques, no new deps), 429 + Retry-After on breach, applied to POST /v1/proxy/{id}/chat (bucket `proxy`, 30/min) and POST /v1/runs (bucket `runs`, 6/min, after admin auth so 401s never consume budget). Tunable via `RATE_LIMIT_ENABLED` / `RATE_LIMIT_PROXY_PER_MIN` / `RATE_LIMIT_RUNS_PER_MIN`. |
 | 2 | Indirect-injection (RAG) PoC | New built-in pseudo-targets `internal://mock-rag` / `-hardened` with an in-memory KB (seeded: one benign doc, one poisoned vendor addendum). Naive keyword retrieval stuffs the doc body into model context — user message stays innocuous. Hardened frames retrieved content as untrusted data and never complies. `POST /admin/targets/{id}/kb` (admin-authed, audit-sealed) poisons a doc live; re-posting a title replaces the default doc. 4 `indirect_injection_rag` seeds validate through a hermetic poisoned-KB probe (admitted only if the exploit actually works). report.py's static INDIRECT_INJECTION_RISK disclaimer becomes a real resisted/caught figure whenever the run exercised that category — same `capabilities_warning` key, no frontend change. |
 | 3 | MCP tool-definition poisoning | Proxy + mock chat bodies accept optional `tools: [{name, description}]`. Vulnerable mock (knob `VULN_TOOL_POISON`, default true) lets description text bleed into the instruction channel; hardened treats it as data only. Request-side inspection structurally sees only `message` — response-side rule #7 (tool-call forgery) + compliance/jury catch the forged call. 4 `tool_definition_poisoning` seeds (LLM06 + AML.T0051.000 — no dedicated ATLAS technique exists for tool poisoning; per ATLAS mapping practice it maps to T0051 LLM Prompt Injection). Also fixed en route: per-connection dedicated sqlite worker thread replacing default-executor to_thread (intermittent SEGV under per-test event loops). |
+
+### 11.3 v2.3 → v2.4 deltas (pytest gate held: 63 → 92 tests)
+
+| # | Delta | Implementation |
+|---|---|---|
+| 1 | Honest provenance | `source_repo`/`source_sha` (placeholder hashes) removed from every seed; replaced by `origin` (hand_authored/adapted), `taxonomy_source`, `provenance_note`; P8 rewritten; `docs/CORPUS-PROVENANCE.md`; report panel "Origin & taxonomy". Test: `test_tags.py`. |
+| 2 | Similarity self-match exclusion | `attack_patterns.parent_id`/`origin_kind`; `SimilarityEngine.score(exclude_ids)` masks a pattern's whole mutation family in batch mode and returns `second_best`; `details.known_corpus_match` kept as evidence only. Effect on the vulnerable run: request gate 160 ALLOW / 135 REVIEW / 5 BLOCK (v2.3's 9 blocks were inflated by cos=1.0 self-matches). Test: `test_similarity_exclusion.py`. |
+| 3 | Real-model evidence path | `scripts/evidence_run.py` (live provider + both mocks under one comparison_id → `docs/evidence/<date>-<provider>/{report.json,report.md,leaderboard.json,SUMMARY.md}`; exit 0 without keys); `CORPUS_VALIDATION_TARGET` + `validated_live`; `jury_mode` (heuristic/mixed/live) in `/healthz`, every verdict, every report, console badge; README "Evidence against real models". Test: `test_jury_mode.py`. |
+| 4 | RAG KB ships benign | `_DEFAULT_DOCS` benign; `POISONED_ADDENDUM` + `poison_default_kb()`; `demo_setup.py --poison`; `scripts/poison_kb.sh`; `_retrieve` returns nothing without a keyword hit (stop-words filtered). Test: `test_indirect_injection.py::test_kb_ships_benign_and_poisoning_is_explicit`. |
+| 5 | Response-side risk score | `fusion.response_layers/fuse_response/response_confidence/severity_for`; `FUSION_RESPONSE_W` (live-retunable via `/admin/fusion-weights`); `inspect_response` returns `risk_score`, `confidence`, `derived_severity`, `layers`; persisted as `response_risk`, `response_confidence`, `derived_severity`, `source_severity`; a literal canary/key leak floors at 85 (critical); report `severity_breakdown`, findings sorted by response risk. Test: `test_response_fusion.py`. |
+| 6 | Markdown export + evidence | `GET /v1/reports/{id}?format=md` and `/v1/reports/compare/{id}?format=md` (executive summary, category table, top-15 findings with evidence and remediation, limitations, chain status); report page executive summary, ranked findings, click-to-open evidence drawer, download buttons; `test_executions.response_excerpt`. Test: `test_report_export.py`. |
+| 7 | Explicit gate policy | `RunIn.enforce_request_block` (batch default false → gate reports, target measured; true → enforced); `test_runs.gate_policy`; `summary.gate_policy`, `gate_policy_note`, `gate_would_block`; alerts fire in both policies. Test: `test_gate_policy.py`. |
+| 8 | Detection edge cases | refusal grammar without bare "sorry" (shared by pipeline, baseline, MockJudge; compliance beats refusal); Luhn check on card spans; entropy detector spares URLs, paths, data-URIs, markdown links, base64 images; dead `looks_encoded` removed; rule `refusal_suppression` + mock handler. Test: `test_detection_edges.py`. |
+| 9 | Genuine multi-turn corpus | seed `turns:[…]` envelope replayed as sequential session turns (`payload_parts`); 12 multi-turn seeds (2–4 turns, incl. a staged persona that leaks only with the whole conversation); new categories `markdown_hidden_instruction` (comments/fences/footnotes/zero-width) and `few_shot_poisoning` with vulnerable/hardened mock handlers; mutators `split_3_turns`, `html_comment_wrap`, `staged_roleplay`; decode chain gains `zero_width` and `hidden_markup` variants with obfuscation bonus; `load_seeds` limiter uses the real category count. Corpus: 92 seeds / 16 categories / 300 validated / 22 dead. Test: `test_multiturn.py`. |
+| 10 | Judge-facing polish | console header `JURY: HEURISTIC/MIXED/LIVE ×n`, embedder mode, live-validated count; decision panel shows decoded payload, corpus match cosine, response risk + severity chip; `docs/DEMO-SCRIPT.md`, `docs/JUDGE-QA.md`. |
+| 11 | Hardening | `CORS_ORIGINS` (same-origin default); `auth_header` masked in every API response and Fernet-encrypted at rest when `SENTINEL_SECRET` + `cryptography` are present (`app/secrets.py`); optional `SENTINEL_PROXY_KEY`; pinned admin key removed from `.env`; `docs/HARDENING.md`. Test: `test_hardening.py`. |
+| 12 | Final gate | 92 tests green; fresh `demo_setup.py` (no keys), `--poison`, `evidence_run.py` exit 0; `docs/CHANGELOG-v2.4.md`. |
 
 ## 12. Honest limitations (also rendered in every report)
 

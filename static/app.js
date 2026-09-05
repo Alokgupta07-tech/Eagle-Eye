@@ -226,7 +226,7 @@ $("#inp").addEventListener("keydown", e => {
 /* ---------- boot ---------- */
 (async () => {
   $("#fSess").textContent = "SESSION " + SESSION + " · WINDOW 20";
-  line("[BOOT] SENTINEL v2.0 — control plane connecting…", "dim");
+  line("[BOOT] SENTINEL v2.4 — control plane connecting…", "dim");
   let h;
   try { h = await (await fetch("/healthz")).json(); }
   catch { line("[BOOT] backend unreachable — start with: python run.py", "bad"); return; }
