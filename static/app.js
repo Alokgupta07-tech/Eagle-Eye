@@ -49,13 +49,16 @@ const stagesEl = $("#stages");
 STAGES.forEach(([i, n]) => { const d = document.createElement("div"); d.className = "stage"; d.id = "st-" + n;
   d.innerHTML = `<span class="idx">[${i}]</span><span class="nm">${n}</span>
   <span class="bar"><i></i></span><span class="ms">—</span>`; stagesEl.appendChild(d); });
-function resetStages() { STAGES.forEach(([, n]) => { const d = $("#st-" + n);
+function resetStages() { $("#decoded").textContent = "—"; $("#kcm").textContent = "—"; $("#rrisk").textContent = "—"; $("#rriskbar").style.width = "0%";
+  STAGES.forEach(([, n]) => { const d = $("#st-" + n);
   d.className = "stage"; d.querySelector("i").style.width = "0%"; d.querySelector(".ms").textContent = "—";
   const note = d.querySelector(".note"); if (note) note.remove(); }); }
 function stageOn(n) { const d = $("#st-" + n); if (!d) return;
   d.classList.add("on"); d.classList.remove("skip", "done");
   if (n === "JURY") $("#ledJury").classList.add("hot"); }
 function stageDone(n, score, ms, detail) { const d = $("#st-" + n); if (!d) return;
+  if (n === "DECODE") { const m = /→ (.*)$/.exec(detail || ""); $("#decoded").textContent = m ? m[1] : (detail ? detail.replace(/^transforms: /, "") : "—"); }
+  if (n === "SIMILARITY") { const m = /cos ([0-9.]+) ≈ ([a-z0-9]+)/.exec(detail || ""); $("#kcm").textContent = m ? `cos ${m[1]} · ${m[2].slice(0, 8)} (STRONG)` : (score ? `top cos ${(score / 100).toFixed(2)}` : "—"); }
   d.classList.remove("on"); d.classList.add("done");
   if (n === "JURY") $("#ledJury").classList.remove("hot");
   d.querySelector("i").style.width = Math.min(100, Math.max(2, score)) + "%";
@@ -97,7 +100,13 @@ function decision(d) { setBand(d.band);
 function gate(ri) { const el = $("#rsp");
   const col = { REDACT: "var(--mg)", BLOCK: "var(--red)", NONE: "var(--green)" }[ri.action] || "var(--dim)";
   el.innerHTML = `<span style="color:${col}">${ri.verdict} · ${ri.action}</span>`
-    + (ri.drift_score != null ? ` <span style="color:var(--dim)">drift ${ri.drift_score}</span>` : ""); }
+    + (ri.drift_score != null ? ` <span style="color:var(--dim)">drift ${ri.drift_score}</span>` : "");
+  const sevCol = { critical: "var(--red)", high: "var(--amber)", medium: "#ffd166", low: "var(--dim)" }[ri.derived_severity] || "var(--dim)";
+  $("#rrisk").innerHTML = ri.risk_score == null ? "—"
+    : `${Number(ri.risk_score).toFixed(1)} / 100 <span style="color:${sevCol}">${(ri.derived_severity || "").toUpperCase()}</span>`
+      + ` <span style="color:var(--dim)">conf ${ri.confidence}</span>`;
+  $("#rriskbar").style.width = ((ri.risk_score || 0)) + "%";
+  $("#rriskbar").style.background = sevCol; }
 
 /* ---------- SSE over POST ---------- */
 async function streamChat(text) {
@@ -224,7 +233,8 @@ $("#inp").addEventListener("keydown", e => {
   $("#ledRules").textContent = `RULES ${h.rules_loaded}`;
   $("#ledEmbed").textContent = "EMBED " + h.embedder.toUpperCase();
   $("#ledStore").textContent = (h.backend + "+" + h.cache).toUpperCase();
-  $("#ledCorpus").textContent = `CORPUS ${h.corpus.validated || 0}✓/${h.corpus.dead || 0}✗`;
+  $("#ledCorpus").textContent = `CORPUS ${h.corpus.validated || 0}✓/${h.corpus.dead || 0}✗` + (h.corpus.validated_live ? ` · ${h.corpus.validated_live} LIVE-VALIDATED` : "");
+  $("#ledEmbed").textContent = "EMBED " + (h.embedder === "offline" ? "OFFLINE (hash)" : h.embedder.toUpperCase());
   const jm = (h.jury_mode || "heuristic").toUpperCase();
   $("#ledJuryT").textContent = jm === "LIVE" ? `JURY: LIVE ×${h.jury.length}` : `JURY: ${jm}`;
   $("#ledJury").classList.toggle("warn", jm !== "LIVE");

@@ -259,6 +259,10 @@ class InspectionEngine:
         sim = res["details"].get("similarity", {})
         if sim.get("strong"):
             detail["similarity"] = f"cos {sim['cos']} ≈ {sim['top_pattern_id']} (STRONG)"
+        elif sim.get("top_pattern_id"):
+            sb = sim.get("second_best") or {}
+            detail["similarity"] = (f"top cos {sim['cos']} ({sim['top_pattern_id'][:8]})"
+                                    + (f" · 2nd {sb.get('cos')}" if sb else ""))
         for key in order:
             await emit("stage_started", {"name": names[key]})
             score = {"decode": res["scores"]["obfuscation"],
