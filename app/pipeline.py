@@ -100,17 +100,22 @@ class InspectionEngine:
 
     # ---------------- request path ----------------
     async def inspect_request(self, text: str, session_id: str | None = None,
-                              emit=None, force_jury: bool = False) -> dict:
+                              emit=None, force_jury: bool = False,
+                              exclude_pattern_ids: set[str] | None = None) -> dict:
         """Score the single message AND (if session context exists) the reassembled window.
-        Whichever scores higher wins — long-horizon payload splitting defense."""
-        single = await self._inspect_one(text, force_jury=force_jury)
+        Whichever scores higher wins — long-horizon payload splitting defense.
+        `exclude_pattern_ids` (batch mode) masks the attack's own corpus family from the
+        similarity layer so a corpus attack is never scored against itself."""
+        single = await self._inspect_one(text, force_jury=force_jury,
+                                         exclude_ids=exclude_pattern_ids)
         window_res = None
         if session_id:
             prior = await self.d.cache.window(session_id)
             if prior:
                 window_text = "\n".join([*prior, text])
                 if window_text != text:
-                    window_res = await self._inspect_one(window_text, force_jury=False)
+                    window_res = await self._inspect_one(window_text, force_jury=False,
+                                                         exclude_ids=exclude_pattern_ids)
         used_window = bool(window_res and window_res["fused"] > single["fused"])
         res = window_res if used_window else single
         res["session_window_used"] = used_window
@@ -124,7 +129,8 @@ class InspectionEngine:
             await self._replay_events(res, emit)
         return res
 
-    async def _inspect_one(self, text: str, force_jury: bool = False) -> dict:
+    async def _inspect_one(self, text: str, force_jury: bool = False,
+                           exclude_ids: set[str] | None = None) -> dict:
         s, d = self.d.settings, self.d
         ms: dict[str, int] = {}
         details: dict = {}
@@ -158,9 +164,15 @@ class InspectionEngine:
         t = time.perf_counter()
         sim_in = text if "decoded" not in chain["variants"] \
             else text + " " + chain["variants"]["decoded"]
-        sim = self.d.sim.score(sim_in)
+        sim = self.d.sim.score(sim_in, exclude_ids=exclude_ids)
         ms["similarity"] = int((time.perf_counter() - t) * 1000)
         details["similarity"] = sim
+        if exclude_ids:
+            # evidence only — the un-excluded match tells the report "this is a known
+            # corpus attack" without letting self-similarity inflate the fused score
+            full = self.d.sim.score(sim_in)
+            details["known_corpus_match"] = {"id": full["top_pattern_id"],
+                                             "cos": full["cos"]}
 
         w = s.fusion_weights
         scores = {"rules": rules_score, "similarity": sim["score"], "obfuscation": obf}

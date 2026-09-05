@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS attack_patterns(
   success_indicators TEXT, failure_indicators TEXT, severity TEXT, remediation TEXT,
   allowed_mutations TEXT, source_repo TEXT, source_sha TEXT,
   origin TEXT, taxonomy_source TEXT, provenance_note TEXT,
+  parent_id TEXT, origin_kind TEXT,
   validation_status TEXT NOT NULL DEFAULT 'pending', validated_at TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS attack_embeddings(
   pattern_id TEXT PRIMARY KEY, embedding TEXT NOT NULL);
@@ -81,6 +82,7 @@ CREATE TABLE IF NOT EXISTS attack_patterns(
   success_indicators TEXT, failure_indicators TEXT, severity TEXT, remediation TEXT,
   allowed_mutations TEXT, source_repo TEXT, source_sha TEXT,
   origin TEXT, taxonomy_source TEXT, provenance_note TEXT,
+  parent_id TEXT, origin_kind TEXT,
   validation_status TEXT NOT NULL DEFAULT 'pending', validated_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT now());
 CREATE TABLE IF NOT EXISTS attack_embeddings(
@@ -159,6 +161,8 @@ class Store:
                     ("attack_patterns", "origin", "TEXT"),
                     ("attack_patterns", "taxonomy_source", "TEXT"),
                     ("attack_patterns", "provenance_note", "TEXT"),
+                    ("attack_patterns", "parent_id", "TEXT"),
+                    ("attack_patterns", "origin_kind", "TEXT"),
                     ("test_runs", "comparison_id", "TEXT")]
         for table, col, typ in upgrades:
             try:

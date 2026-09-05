@@ -17,6 +17,12 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
     baseline = await store.latest_baseline(target["id"])
     patterns = await store.list_patterns(statuses=("validated",), categories=categories,
                                          limit=limit)
+    # mutation families: seed id -> {seed, all variants}; used to exclude an attack's
+    # own family from the similarity layer (v2.4 step 2 — no self-match inflation)
+    families: dict[str, set[str]] = {}
+    for q in await store.list_patterns(statuses=None):
+        root = q.get("parent_id") or q["id"]
+        families.setdefault(root, set()).update({q["id"], root})
     sys_prompt = mocktarget.system_prompt(s) if target["endpoint_url"].startswith(
         "internal://mock") else None
 
@@ -31,8 +37,10 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
 
         # --- request gate (session-aware: parts accumulate in the window) ---
         req = None
+        family = families.get(p.get("parent_id") or p["id"], {p["id"]})
         for part in parts:
-            req = await engine.inspect_request(part, session_id=sid)
+            req = await engine.inspect_request(part, session_id=sid,
+                                               exclude_pattern_ids=family)
 
         verdict, action, exec_extra = None, "NONE", {}
         if req["band"] == "BLOCK":
@@ -110,7 +118,9 @@ async def run_batch(deps, run_id: str, target: dict, categories=None, limit: int
         await store.add_execution(
             run_id, pattern_id=p["id"], variant_text=p["payload"][:600],
             request_scores={**req["scores"], "fused": req["fused"],
-                            "window": req.get("session_window_used", False)},
+                            "window": req.get("session_window_used", False),
+                            "known_corpus_match": req["details"].get("known_corpus_match"),
+                            "rule_hits": [h["name"] for h in req["details"].get("rule_hits", [])]},
             response_scores=({"verdict": rres["verdict"], "action": rres["action"],
                               "leaks": len(rres["matches"]),
                               "success_hits": rres["success_hits"],

@@ -141,9 +141,12 @@ async def seed_corpus(deps, seeds: list[dict], store_run_stats: dict | None = No
               "capabilities": {}, "canary_token": deps.settings.MOCK_CANARY}
     stats = {"seeds": 0, "variants": 0, "validated": 0, "dead": 0, "skipped": 0}
 
-    async def admit(payload: str, seed: dict, mutation: str | None):
+    async def admit(payload: str, seed: dict, mutation: str | None,
+                    parent_id: str | None = None):
         ph = payload_id(payload)
         row = {"payload_hash": ph, "category": seed["category"],
+               "parent_id": parent_id,
+               "origin_kind": "mutation" if mutation else "seed",
                "subcategory": mutation or seed.get("subcategory"),
                "payload": payload,
                "expected_safe_behavior": seed.get("expected_safe_behavior", ""),
@@ -172,7 +175,7 @@ async def seed_corpus(deps, seeds: list[dict], store_run_stats: dict | None = No
     for seed in seeds:
         seed = dict(seed)
         seed.setdefault("subcategory", None)
-        await admit(seed["payload"], seed, None)
+        seed_pid = await admit(seed["payload"], seed, None)
         stats["seeds"] += 1
         for mname in seed.get("allowed_mutations", []):
             fn = TRANSFORMS.get(mname)
@@ -184,7 +187,8 @@ async def seed_corpus(deps, seeds: list[dict], store_run_stats: dict | None = No
                 continue
             if mname == "payload_split" and len(seed["payload"].split()) < 4:
                 continue
-            await admit(variant, seed, "payload_split" if mname == "payload_split" else mname)
+            await admit(variant, seed, "payload_split" if mname == "payload_split" else mname,
+                        parent_id=seed_pid)
             stats["variants"] += 1
 
     await deps.sim.reload(store)
