@@ -8,7 +8,7 @@
 6. Markdown export + evidence drawer — `?format=md` for reports and leaderboards, `render_markdown`, executive summary, ranked findings, `response_excerpt`. Test: `test_report_export.py::test_markdown_export`.
 7. Explicit gate policy — `enforce_request_block`, `test_runs.gate_policy`, `gate_would_block`, `gate_policy_note`. Test: `test_gate_policy.py::test_permissive_vs_enforcing`.
 8. Detection edge cases — refusal grammar, Luhn, URL/data-URI-safe entropy, dead code removed, `refusal_suppression` rule + mock handler. Tests: `test_detection_edges.py` (4).
-9. Genuine multi-turn corpus — `turns` seeds, `payload_parts`, `markdown_hidden_instruction`, `few_shot_poisoning`, mutators `split_3_turns`/`html_comment_wrap`/`staged_roleplay`, decode chain `zero_width`/`hidden_markup`. Tests: `test_multiturn.py` (5).
+9. Genuine multi-turn corpus (own `multi_turn` category, 17 categories total) — `turns` seeds, `payload_parts`, `markdown_hidden_instruction`, `few_shot_poisoning`, mutators `split_3_turns`/`html_comment_wrap`/`staged_roleplay`, decode chain `zero_width`/`hidden_markup`. Tests: `test_multiturn.py` (5).
 10. Console/report polish + docs — header mode badges, decoded payload, corpus match, response risk chip; `docs/DEMO-SCRIPT.md`, `docs/JUDGE-QA.md`. Covered by `test_api.py` (SSE contract unchanged).
 11. Hardening — `CORS_ORIGINS`, `app/secrets.py` (mask + Fernet at rest), `SENTINEL_PROXY_KEY`, unpinned admin key, `docs/HARDENING.md`. Tests: `test_hardening.py` (6).
 12. Final gate — 92 tests green; `demo_setup.py` clean on fresh `data/` with no keys; `--poison` restores the RAG kill-shot; `evidence_run.py` exits 0 without keys; ASBUILT §11.3 complete.

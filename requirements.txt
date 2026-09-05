@@ -11,3 +11,4 @@ pytest-asyncio>=0.23
 # sentence-transformers>=2.7   # real 384-d embeddings (EMBEDDER=st)
 # asyncpg>=0.29                # Postgres backend (DATABASE_URL=postgresql://...)
 # redis>=5.0                   # Redis session store (CACHE=redis)
+# cryptography>=42             # Fernet encryption of target auth headers (SENTINEL_SECRET)

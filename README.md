@@ -41,7 +41,7 @@ Twelve deltas over v2.3 (full table: ASBUILT §11.3). The ones a judge will noti
   and remediation; the report page has a click-to-open evidence drawer.
 - **Gate policy is explicit**: batch runs are `permissive` (gate reports, target measured);
   `enforce_request_block: true` gives live-proxy semantics.
-- **Corpus: 92 seeds / 16 categories / 300 validated** incl. genuine multi-turn attacks,
+- **Corpus: 92 seeds / 17 categories / 300 validated** incl. a dedicated `multi_turn` category,
   hidden-markup and few-shot poisoning, 11 mutators.
 - **Hardening**: same-origin CORS, masked/encrypted target credentials, optional proxy key.
 
@@ -177,7 +177,7 @@ declared, never hidden.
 app/        config db cache embed textnorm rules similarity jury fusion pipeline
             baseline corpus mocktarget target_client runner audit report routers deps main
 static/     cyber console (index.html) + report (report.html) — zero build step
-seeds/      92 attacks × 16 categories (incl. multi-turn `turns` seeds) with
+seeds/      92 attacks × 17 categories (incl. the `multi_turn` category of `turns` seeds) with
             success/failure indicators, remediation, origin/taxonomy tags, mutations
 scripts/    seed_corpus.py · demo_setup.py
 tests/      92 tests: fusion gating, decode chain, redaction offsets, audit tamper,
