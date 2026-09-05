@@ -8,12 +8,12 @@ import time
 import uuid
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from . import mocktarget
 from .deps import rate_limited, require_admin
-from .report import build_report
+from .report import build_report, render_markdown, render_leaderboard_markdown
 from .runner import run_batch
 from .target_client import call_target
 
@@ -355,15 +355,33 @@ def build_router(settings=None) -> APIRouter:
         return {"executions": await request.app.state.deps.store.list_executions(run_id)}
 
     @r.get("/v1/reports/compare/{comparison_id}")
-    async def compare_report(comparison_id: str, request: Request):
+    async def compare_report(comparison_id: str, request: Request,
+                             format: str = Query(default="json")):
         """Leaderboard: one row per target, side by side."""
         board = await leaderboard_for(request.app.state.deps, comparison_id)
-        return board or {"error": "comparison not found"}
+        if not board:
+            return {"error": "comparison not found"}
+        if format == "md":
+            return Response(render_leaderboard_markdown(board),
+                            media_type="text/markdown; charset=utf-8",
+                            headers={"Content-Disposition":
+                                     f'attachment; filename="sentinel-leaderboard-{comparison_id}.md"'})
+        return board
 
     @r.get("/v1/reports/{run_id}")
-    async def get_report(run_id: str, request: Request):
-        rep = await build_report(request.app.state.deps, run_id)
-        return rep or {"error": "run not found"}
+    async def get_report(run_id: str, request: Request,
+                         format: str = Query(default="json")):
+        d = request.app.state.deps
+        rep = await build_report(d, run_id)
+        if not rep:
+            return {"error": "run not found"}
+        if format == "md":
+            audit = await d.audit.verify(run_id=run_id)
+            md = render_markdown(rep, audit)
+            return Response(md, media_type="text/markdown; charset=utf-8",
+                            headers={"Content-Disposition":
+                                     f'attachment; filename="sentinel-report-{run_id}.md"'})
+        return rep
 
     # ---------------- audit ----------------
     @r.get("/audit/verify")

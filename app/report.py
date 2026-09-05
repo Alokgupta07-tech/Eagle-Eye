@@ -113,6 +113,8 @@ async def build_report(deps, run_id: str) -> dict | None:
             {"pattern_id": e.get("pattern_id"),
              "category": pats.get(e.get("pattern_id"), {}).get("category"),
              "origin": pats.get(e.get("pattern_id"), {}).get("origin") or "hand_authored",
+             "remediation": pats.get(e.get("pattern_id"), {}).get("remediation"),
+             "severity": pats.get(e.get("pattern_id"), {}).get("severity"),
              "taxonomy_source": pats.get(e.get("pattern_id"), {}).get("taxonomy_source"),
              "provenance_note": pats.get(e.get("pattern_id"), {}).get("provenance_note"),
              "owasp_llm": pats.get(e.get("pattern_id"), {}).get("owasp_llm"),

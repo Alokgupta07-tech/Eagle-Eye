@@ -203,3 +203,14 @@ tr:hover td{background:rgba(0,229,255,.04)}
 input[type=range]{accent-color:#00ff9c;height:4px;flex:unset;width:100%;padding:0}
 input#adminkey{background:#060d12;border:1px solid var(--line);color:var(--txt);outline:none}
 input#adminkey:focus{border-color:var(--cy)}
+
+/* v2.4 — report evidence drawer, severity chips, download buttons */
+.btn{display:inline-block;padding:3px 9px;border:1px solid var(--cy);color:var(--cy);font-size:10px;letter-spacing:1px;text-decoration:none;margin-left:6px;border-radius:2px}
+.btn:hover{background:var(--cy);color:#000}
+tr.ev{display:none}tr.ev.open{display:table-row}
+tr.frow-click{cursor:pointer}tr.frow-click:hover td{background:rgba(0,255,65,.06)}
+.evidence{padding:8px 10px;border-left:2px solid var(--cy);font-size:11px;line-height:1.7;background:rgba(0,0,0,.35)}
+.evidence code{white-space:pre-wrap;word-break:break-word;color:var(--amber)}
+.evidence b{color:var(--cy);letter-spacing:1px;font-size:10px;margin-right:6px}
+.pill.sev-critical{border-color:#ff2d55;color:#ff2d55}.pill.sev-high{border-color:var(--amber);color:var(--amber)}
+.pill.sev-medium{border-color:#ffd166;color:#ffd166}.pill.sev-low{border-color:var(--dim);color:var(--dim)}
