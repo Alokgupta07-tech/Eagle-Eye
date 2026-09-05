@@ -1,0 +1,29 @@
+# OPTIONAL primary-path infra. The app runs end-to-end WITHOUT this
+# (sqlite + in-memory cache + offline embedder). Use this when you want
+# the canonical Postgres + Redis path:
+#   docker compose up -d
+#   export DATABASE_URL=postgresql+asyncpg://sentinel:sentinel@localhost:5432/sentinel
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: sentinel
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes: [pgdata:/var/lib/postgresql/data]
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  pgdata:

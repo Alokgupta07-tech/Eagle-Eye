@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SENTINEL // CYBER OPS CONSOLE</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<canvas id="rain"></canvas>
+<div class="scan"></div><div class="vig"></div>
+
+<header>
+  <div>
+    <div class="logo">⌁ SENTINEL<b>_v2</b></div>
+    <div class="sub">prompt-injection firewall // live proxy console</div>
+  </div>
+  <div class="leds">
+    <div class="led"><i></i><input id="adminkey" type="password" placeholder="ADMIN KEY"
+      title="control-plane key (printed at server boot)" style="width:120px;padding:3px 7px;font-size:10px"></div>
+    <div class="led" id="ledJury"><i></i><span id="ledJuryT">JURY —</span></div>
+    <div class="led"><i></i><span id="ledRules">RULES —</span></div>
+    <div class="led"><i></i><span id="ledEmbed">EMBED —</span></div>
+    <div class="led"><i></i><span id="ledCorpus">CORPUS —</span></div>
+    <div class="led"><i></i><span id="ledStore">STORE —</span></div>
+    <div class="led"><i></i><span id="clock">--:--:--</span></div>
+  </div>
+</header>
+
+<main>
+  <div class="col">
+    <section class="panel">
+      <div class="ptitle">▣ REQUEST PIPELINE <span class="tick">// layer telemetry</span>
+        <a href="/report.html">REPORT ↗</a></div>
+      <div id="stages"></div>
+      <div class="legend">FUSION = 0.35·RULES + 0.30·SIMILARITY + 0.10·OBFUSC + 0.25·JURY  |  BANDS: &lt;30 ALLOW · 30–69 REVIEW · ≥70 BLOCK · conf&lt;0.4 caps BLOCK→REVIEW</div>
+    </section>
+
+    <section class="panel">
+      <div class="ptitle">▣ DECISION <span class="tick">// sealed to audit chain</span></div>
+      <div class="dec">
+        <div class="band" id="band">IDLE</div>
+        <div class="kv">
+          <div class="row"><span>FUSED SCORE</span><b id="fused">—</b></div>
+          <div class="row"><span>CONFIDENCE</span><b id="confv">—</b></div>
+          <div class="confbar"><i id="confbar"></i></div>
+          <div class="row"><span>SESSION WINDOW</span><b id="win">—</b></div>
+          <div class="row"><span>RESPONSE GATE</span><b id="rsp">—</b></div>
+          <div class="hashrow" id="audit">CHAIN ✔ waiting for first decision…</div>
+          <div class="fwrap" id="fwrap">
+            <div class="frow"><span>FUSION TUNER</span><span style="color:var(--dimmer)">post new weights live — current decision re-judged instantly</span><b></b></div>
+            <div class="frow"><span>RULES</span><input type="range" id="w-rules" min="0" max="100" value="35"><b id="wv-rules">0.35</b></div>
+            <div class="frow"><span>SIMILARITY</span><input type="range" id="w-similarity" min="0" max="100" value="30"><b id="wv-similarity">0.30</b></div>
+            <div class="frow"><span>OBFUSCATION</span><input type="range" id="w-obfuscation" min="0" max="100" value="10"><b id="wv-obfuscation">0.10</b></div>
+            <div class="frow"><span>JURY</span><input type="range" id="w-judge" min="0" max="100" value="25"><b id="wv-judge">0.25</b></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="panel" style="display:flex;flex-direction:column">
+      <div class="ptitle">▣ TARGET UPLINK <span class="tick" id="uptick">// connecting…</span></div>
+      <div class="term" id="term"></div>
+      <div class="btnrow">
+        <button class="cyan" data-sc="benign">▶ Benign Query</button>
+        <button class="atk" data-sc="override">▶ Override Attack</button>
+        <button class="atk" data-sc="b64">▶ Base64 Smuggle</button>
+        <button class="atk" data-sc="canary">▶ Canary Extraction</button>
+        <button data-sc="reportlink" onclick="location.href='/report.html'">▶ Latest Report</button>
+      </div>
+      <div class="inrow"><span>&gt;</span>
+        <input id="inp" placeholder="type any prompt — routed through the firewall…" autocomplete="off">
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <span id="fMode">MODE: LIVE-PROXY</span>
+  <span>P1: DATA-PLANE ISOLATED</span><span>P5: RESPONSE GATE INDEPENDENT</span>
+  <span class="ok" id="fChain">AUDIT CHAIN ✔</span>
+  <span style="margin-left:auto" id="fSess"></span>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SENTINEL // RUN REPORT</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="scan"></div><div class="vig"></div>
+
+<header>
+  <div>
+    <div class="logo">⌁ SENTINEL<b>_v2</b></div>
+    <div class="sub">security assessment report // tamper-evident</div>
+  </div>
+  <div class="leds">
+    <select id="verdict" title="run selector"></select>
+    <div class="led"><i></i><span id="clock">--:--:--</span></div>
+    <div class="led"><i></i><a href="/" style="color:var(--neon)">CONSOLE ↗</a></div>
+  </div>
+</header>
+
+<div class="wrap" id="root">
+  <div class="panel pad" id="loading"><span class="ptitle" style="border:none">LOADING REPORT…</span></div>
+</div>
+
+<footer>
+  <span>P6: EVERY RECORD HASH-CHAINED</span><span>P7: LIMITATIONS DECLARED</span>
+  <span class="ok">PROVENANCE: CORPUS @ PINNED SHAs</span>
+</footer>
+
+<script>
+setInterval(()=>{document.querySelector("#clock").textContent=new Date().toTimeString().slice(0,8)},1000);
+</script>
+<script src="/report.js"></script>
+</body>
+</html>
