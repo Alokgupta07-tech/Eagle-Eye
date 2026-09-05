@@ -98,6 +98,15 @@ def rate_limited(bucket: str, per_min: int):
     return _check
 
 
+async def require_proxy_key(request: Request,
+                            x_sentinel_proxy_key: str | None = Header(default=None)):
+    """Optional lock on the data plane (v2.4): enforced only when SENTINEL_PROXY_KEY is set,
+    so the open demo stays open and a judge can see it can be locked."""
+    expected = request.app.state.deps.settings.SENTINEL_PROXY_KEY
+    if expected and x_sentinel_proxy_key != expected:
+        raise HTTPException(status_code=401, detail="invalid or missing X-Sentinel-Proxy-Key")
+
+
 async def require_admin(request: Request,
                         x_sentinel_admin_key: str | None = Header(default=None)):
     """Control-plane gate: every /admin/* route and POST /v1/runs.

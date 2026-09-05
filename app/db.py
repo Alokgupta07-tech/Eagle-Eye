@@ -283,7 +283,9 @@ class Store:
     # targets
     async def create_target(self, name, endpoint_url, auth_header=None,
                             capabilities=None, canary_token=None, seeded=False) -> dict:
-        row = {"name": name, "endpoint_url": endpoint_url, "auth_header": auth_header,
+        from .secrets import protect
+        row = {"name": name, "endpoint_url": endpoint_url,
+               "auth_header": protect(auth_header, self.s.SENTINEL_SECRET),
                "capabilities": capabilities or {}, "canary_token": canary_token,
                "system_prompt_seeded": int(seeded)}
         tid = await self.insert("targets", self._enc("targets", row))

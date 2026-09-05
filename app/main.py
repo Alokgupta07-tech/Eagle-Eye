@@ -24,6 +24,12 @@ def create_app(settings=None) -> FastAPI:
         mode = (f"backend={deps.store.backend} cache={deps.cache.mode} "
                 f"embedder={deps.embedder.mode} jury={deps.jury.describe()}")
         print(f"[sentinel] online — {mode}")
+        from .secrets import available
+        if not available(deps.settings.SENTINEL_SECRET):
+            print("[sentinel] WARNING: target auth headers stored unencrypted — set "
+                  "SENTINEL_SECRET and `pip install cryptography` to encrypt at rest")
+        if deps.settings.SENTINEL_PROXY_KEY:
+            print("[sentinel] proxy chat locked: X-Sentinel-Proxy-Key required")
         if not deps.settings.SENTINEL_ADMIN_KEY:
             print(f"[sentinel] ADMIN KEY (random per boot): {deps.settings.admin_key}")
             print("[sentinel] pin it via SENTINEL_ADMIN_KEY in .env — required for "
@@ -34,8 +40,10 @@ def create_app(settings=None) -> FastAPI:
     app = FastAPI(title="SENTINEL — Prompt-Injection Security Testing Platform",
                   version="2.0", lifespan=lifespan)
     app.state.deps = deps
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"],
-                       allow_headers=["*"])
+    origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+    if origins:   # v2.4: same-origin by default; cross-origin is an explicit opt-in
+        app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"],
+                           allow_headers=["*"])
     app.include_router(build_router(settings))
     app.include_router(mock_router)
 

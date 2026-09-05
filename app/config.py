@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     RULE_REFRESH_S: int = 300
 
     CORPUS_VALIDATION_TARGET: str = "internal://mock"   # optionally a live provider target
+    CORS_ORIGINS: str = ""                # v2.4: same-origin only unless listed ("*" = opt in)
+    SENTINEL_SECRET: str = ""             # v2.4: Fernet key material for auth_header at rest
+    SENTINEL_PROXY_KEY: str = ""          # v2.4: when set, proxy chat needs X-Sentinel-Proxy-Key
     SENTINEL_ADMIN_KEY: str = ""          # empty -> random per boot (printed at startup)
     ENTROPY_THRESHOLD: float = 4.0        # Shannon bits/char for generic secret detection
     ENTROPY_MIN_LEN: int = 20

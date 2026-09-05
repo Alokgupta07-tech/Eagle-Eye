@@ -12,7 +12,8 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 from . import mocktarget
-from .deps import rate_limited, require_admin
+from .deps import rate_limited, require_admin, require_proxy_key
+from .secrets import mask
 from .report import build_report, render_markdown, render_leaderboard_markdown
 from .runner import run_batch
 from .target_client import call_target
@@ -204,7 +205,8 @@ def build_router(settings=None) -> APIRouter:
             from .baseline import baseline_target
             await baseline_target(d, await d.store.get_target(t["id"]))
         d.baseline_tasks[t["id"]] = asyncio.create_task(_baseline())
-        return {"target": t, "baselining": "started"}
+        return {"target": {**t, "auth_header": mask(t.get("auth_header"))},
+                "baselining": "started"}
 
     @r.get("/admin/targets", dependencies=[Depends(require_admin)])
     async def list_targets(request: Request):
@@ -213,7 +215,8 @@ def build_router(settings=None) -> APIRouter:
         for t in await d.store.list_targets():
             b = await d.store.latest_baseline(t["id"])
             task = d.baseline_tasks.get(t["id"])
-            out.append({**t, "baseline_version": b["version"] if b else None,
+            out.append({**t, "auth_header": mask(t.get("auth_header")),
+                        "baseline_version": b["version"] if b else None,
                         "baseline_status": ("running" if task and not task.done()
                                             else ("done" if b else "none"))})
         return {"targets": out}
@@ -397,7 +400,8 @@ def build_router(settings=None) -> APIRouter:
 
     # ---------------- live proxy ----------------
     @r.post("/v1/proxy/{target_id}/chat",
-            dependencies=[Depends(rate_limited("proxy", _rl["proxy"]))])
+            dependencies=[Depends(require_proxy_key),
+                          Depends(rate_limited("proxy", _rl["proxy"]))])
     async def proxy_chat(target_id: str, body: ChatIn, request: Request,
                          stream: bool = Query(default=False)):
         d = request.app.state.deps

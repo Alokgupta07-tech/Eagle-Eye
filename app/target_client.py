@@ -44,7 +44,8 @@ async def call_target(target: dict, messages: list[dict], session_id: str,
 
     headers = {"Content-Type": "application/json"}
     if target.get("auth_header"):
-        headers["Authorization"] = target["auth_header"]
+        from .secrets import reveal
+        headers["Authorization"] = reveal(target["auth_header"], settings.SENTINEL_SECRET)
     payload = {"model": target.get("name", "target"), "messages": messages}
     if tools:
         payload["tools"] = tools
