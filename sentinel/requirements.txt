@@ -1,0 +1,13 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+pydantic-settings>=2.2
+httpx>=0.27
+numpy>=1.26
+pytest>=8.0
+pytest-asyncio>=0.23
+
+# ---- optional primary-path backends (system runs fully without them) ----
+# sentence-transformers>=2.7   # real 384-d embeddings (EMBEDDER=st)
+# asyncpg>=0.29                # Postgres backend (DATABASE_URL=postgresql://...)
+# redis>=5.0                   # Redis session store (CACHE=redis)
